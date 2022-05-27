@@ -1,0 +1,336 @@
+---
+title: "Differential Expression in Farhad's Evolved SBW25"
+author: "Mike Miller"
+date: "27/05/2022"
+output: html_document
+---
+
+
+
+```{r message=FALSE}
+library(DESeq2)
+library(tidyverse)
+library(RColorBrewer)
+library(pheatmap)
+library(ggrepel)
+library(cowplot)
+library(edgeR)
+library(limma)
+library(DEFormats)
+library(dplyr)
+library(reshape2)
+
+library(ComplexHeatmap)
+
+```
+```{r setup, include=FALSE, echo=FALSE}
+require("knitr")
+opts_knit$set(root.dir = "counts.clean/")
+
+
+
+group = factor(c(rep("EVOL_Ac", 4), rep("EVOL", 4), rep("MNT_Ac", 4), rep("MNT", 4), rep("Fusion_Ac", 4), rep("Fusion", 4), rep("WFE_Ac", 4), rep("WFE", 4), rep("WS1_Ac", 4), rep("WS1", 4), rep("WT_Ac", 4), rep("WT", 4)))
+```
+
+```{r}
+counts.sbw25 = readDGE(list.files(pattern="_counts.txt"), getwd(), columns = c(1,7), group = group)
+
+```
+```{r}
+
+dge <- counts.sbw25
+
+dge <- DGEList(dge$counts[apply(dge$counts, 1, sum) != 0, ],
+               group=group)
+
+
+
+
+dge <- calcNormFactors(dge)
+
+
+
+
+dge <- estimateCommonDisp(dge)
+dge <- estimateTagwiseDisp(dge)
+```
+
+
+
+```{r}
+## Exact test - "Note that the first group listed in the pair is the baseline for the comparison"
+
+dgeTest.FUSION <- exactTest(dge, pair = c("WT","Fusion_Ac") )
+dgeTest.WFE <- exactTest(dge, pair = c("WT","WFE_Ac") )
+dgeTest.WS1 <- exactTest(dge, pair = c("WT","WS1_Ac") )
+dgeTest.EVOL <- exactTest(dge, pair = c("WT","EVOL_Ac") )
+dgeTest.MNT <- exactTest(dge, pair = c("WT","MNT_Ac") )
+dgeTest.WT <- exactTest(dge, pair = c("WT","WT_Ac") )
+
+```
+### This chunk is only needed if you want to output a table for a specific PFLU of interest..
+```{r}
+### Search for a specific PFLU ###
+searchlist <- c("PFLU_5940") ### enter PFLUs of interest, separated by comma 
+
+
+
+dfList <- list(dgeTest.EVOL,dgeTest.FUSION,dgeTest.MNT,dgeTest.WFE,dgeTest.WS1,dgeTest.WT)
+
+outlist <- list()
+
+for (i in 1:length(dfList)) {
+searchfile <- dfList[[i]] ### replace strain after "." with strain of interest
+df.name <- deparse(substitute(searchfile))
+outlist[[i]]<-rownames_to_column(searchfile$table[searchlist, ], var = "PFLU") %>% 'rownames<-'(searchfile$comparison[2])
+}
+
+search.result <- do.call(rbind, outlist) %>% rownames_to_column(var = "Sample") %>% select(!logCPM) %>% mutate(FC = round(2^(logFC),2))
+search.result
+
+
+
+write.table(search.result, file = "../output/DGE_PFLU_5940.csv", sep = ",", row.names = F)
+```
+
+
+
+
+```{r}
+###
+###############################################################
+### prepare output files for upreg and downreg ###################
+###############################################################
+
+
+tags.FUSION <- topTags(dgeTest.FUSION, n=nrow(dgeTest.FUSION$table))
+tags.WFE <- topTags(dgeTest.WFE, n=nrow(dgeTest.WFE$table))
+tags.WS1 <- topTags(dgeTest.WS1, n=nrow(dgeTest.WS1$table))
+tags.WT <- topTags(dgeTest.WT, n=nrow(dgeTest.WT$table))
+tags.EVOL <- topTags(dgeTest.EVOL, n=nrow(dgeTest.EVOL$table))
+tags.MNT <- topTags(dgeTest.MNT, n=nrow(dgeTest.MNT$table))
+
+
+
+sigDownReg.FUSION <- tags.FUSION$table[tags.FUSION$table$FDR<0.05,]
+sigDownReg.FUSION <- sigDownReg.FUSION[order(sigDownReg.FUSION$logFC),]
+sigUpReg.FUSION <- sigDownReg.FUSION[order(sigDownReg.FUSION$logFC, decreasing=TRUE),]
+
+sigDownReg.WFE <- tags.WFE$table[tags.WFE$table$FDR<0.05,]
+sigDownReg.WFE <- sigDownReg.WFE[order(sigDownReg.WFE$logFC),]
+sigUpReg.WFE <- sigDownReg.WFE[order(sigDownReg.WFE$logFC, decreasing=TRUE),]
+
+sigDownReg.WS1 <- tags.WS1$table[tags.WS1$table$FDR<0.05,]
+sigDownReg.WS1 <- sigDownReg.WS1[order(sigDownReg.WS1$logFC),]
+sigUpReg.WS1 <- sigDownReg.WS1[order(sigDownReg.WS1$logFC, decreasing=TRUE),]
+
+sigDownReg.WT <- tags.WT$table[tags.WT$table$FDR<0.05,]
+sigDownReg.WT <- sigDownReg.WT[order(sigDownReg.WT$logFC),]
+sigUpReg.WT <- sigDownReg.WT[order(sigDownReg.WT$logFC, decreasing=TRUE),]
+
+sigDownReg.EVOL <- tags.EVOL$table[tags.EVOL$table$FDR<0.05,]
+sigDownReg.EVOL <- sigDownReg.EVOL[order(sigDownReg.EVOL$logFC),]
+sigUpReg.EVOL <- sigDownReg.EVOL[order(sigDownReg.EVOL$logFC, decreasing=TRUE),]
+
+sigDownReg.MNT <- tags.MNT$table[tags.MNT$table$FDR<0.05,]
+sigDownReg.MNT <- sigDownReg.MNT[order(sigDownReg.MNT$logFC),]
+sigUpReg.MNT <- sigDownReg.MNT[order(sigDownReg.MNT$logFC, decreasing=TRUE),]
+
+
+FDR.max <- 0.05
+logFC.min <- 2
+logFC.max <- -2
+
+sigUpReg.FUSION <- subset(sigUpReg.FUSION, FDR<FDR.max & logFC>logFC.min)
+sigDownReg.FUSION <- subset(sigDownReg.FUSION, FDR<FDR.max & logFC<logFC.max)
+
+sigUpReg.WFE <- subset(sigUpReg.WFE, FDR<FDR.max & logFC>logFC.min)
+sigDownReg.WFE <- subset(sigDownReg.WFE, FDR<FDR.max & logFC<logFC.max)
+
+sigUpReg.WS1 <- subset(sigUpReg.WS1, FDR<FDR.max & logFC>logFC.min)
+sigDownReg.WS1 <- subset(sigDownReg.WS1, FDR<FDR.max & logFC<logFC.max)
+
+sigUpReg.WT <- subset(sigUpReg.WT, FDR<FDR.max & logFC>logFC.min)
+sigDownReg.WT <- subset(sigDownReg.WT, FDR<FDR.max & logFC<logFC.max)
+
+
+sigUpReg.EVOL <- subset(sigUpReg.EVOL, FDR<FDR.max & logFC>logFC.min)
+sigDownReg.EVOL <- subset(sigDownReg.EVOL, FDR<FDR.max & logFC<logFC.max)
+
+
+sigUpReg.MNT <- subset(sigUpReg.MNT, FDR<FDR.max & logFC>logFC.min)
+sigDownReg.MNT <- subset(sigDownReg.MNT, FDR<FDR.max & logFC<logFC.max)
+
+
+library(data.table)
+setDT(sigUpReg.FUSION, keep.rownames = T)[]
+setnames(sigUpReg.FUSION, 1, "locus.tag")
+setDT(sigDownReg.FUSION, keep.rownames = T)[]
+setnames(sigDownReg.FUSION, 1, "locus.tag")
+
+setDT(sigUpReg.WFE, keep.rownames = T)[]
+setnames(sigUpReg.WFE, 1, "locus.tag")
+setDT(sigDownReg.WFE, keep.rownames = T)[]
+setnames(sigDownReg.WFE, 1, "locus.tag")
+
+setDT(sigUpReg.WS1, keep.rownames = T)[]
+setnames(sigUpReg.WS1, 1, "locus.tag")
+setDT(sigDownReg.WS1, keep.rownames = T)[]
+setnames(sigDownReg.WS1, 1, "locus.tag")
+
+setDT(sigUpReg.WT, keep.rownames = T)[]
+setnames(sigUpReg.WT, 1, "locus.tag")
+setDT(sigDownReg.WT, keep.rownames = T)[]
+setnames(sigDownReg.WT, 1, "locus.tag")
+
+setDT(sigUpReg.EVOL, keep.rownames = T)[]
+setnames(sigUpReg.EVOL, 1, "locus.tag")
+setDT(sigDownReg.EVOL, keep.rownames = T)[]
+setnames(sigDownReg.EVOL, 1, "locus.tag")
+
+setDT(sigUpReg.MNT, keep.rownames = T)[]
+setnames(sigUpReg.MNT, 1, "locus.tag")
+setDT(sigDownReg.MNT, keep.rownames = T)[]
+setnames(sigDownReg.MNT, 1, "locus.tag")
+
+
+```
+
+
+
+```{r}
+### find top n and bottom n genes
+
+gup = 10
+gdown = 10
+
+FUSION.up <- top_n(sigUpReg.FUSION, wt=logFC, n=gup)
+FUSION.down <- top_n(sigDownReg.FUSION, wt=logFC, n=gdown)
+FUSION.top <- rbind(FUSION.up,FUSION.down) %>% select(locus.tag)
+
+WFE.up <- top_n(sigUpReg.WFE, wt=logFC, n=gup)
+WFE.down <- top_n(sigDownReg.WFE, wt=logFC, n=gdown)
+WFE.top <- rbind(WFE.up,WFE.down) %>% select(locus.tag)
+
+WS1.up <- top_n(sigUpReg.WS1, wt=logFC, n=gup)
+WS1.down <- top_n(sigDownReg.WS1, wt=logFC, n=gdown)
+WS1.top <- rbind(WS1.up,WS1.down) %>% select(locus.tag)
+
+MNT.up <- top_n(sigUpReg.MNT, wt=logFC, n=gup)
+MNT.down <- top_n(sigDownReg.MNT, wt=logFC, n=gdown)
+MNT.top <- rbind(MNT.up,MNT.down) %>% select(locus.tag)
+
+EVOL.up <- top_n(sigUpReg.EVOL, wt=logFC, n=gup)
+EVOL.down <- top_n(sigDownReg.EVOL, wt=logFC, n=gdown)
+EVOL.top <- rbind(EVOL.up,EVOL.down) %>% select(locus.tag)
+
+WT.up <- top_n(sigUpReg.WT, wt=logFC, n=gup)
+WT.down <- top_n(sigDownReg.WT, wt=logFC, n=gdown)
+WT.top <- rbind(WT.up,WT.down) %>% select(locus.tag)
+
+
+top.list <- unique(rbind(WT.top,MNT.top,EVOL.top,FUSION.top,WFE.top,WS1.top)) 
+
+Top.FC <- counts.sbw25[which(rownames(counts.sbw25$counts) %in% top.list$locus.tag),]
+
+
+
+dge.top.fc <- DGEList(Top.FC$counts[apply(Top.FC$counts, 1, sum) !=0,], group = group)
+
+dge.top.fc <- calcNormFactors(dge.top.fc)
+dge.top.fc <- estimateCommonDisp(dge.top.fc)
+dge.top.fc <- estimateTagwiseDisp(dge.top.fc)
+
+```
+
+```{r}
+library(purrr)
+
+dge.top.FUSION <- exactTest(dge.top.fc, pair = c("WT","Fusion_Ac")) %>% pluck('table') %>% mutate(FUSION.FC = round(2^(logFC),4)) %>% select(FUSION.FC) %>% rownames_to_column("PFLU")
+
+dge.top.WFE <- exactTest(dge.top.fc, pair = c("WT","WFE_Ac")) %>% pluck('table') %>% mutate(WFE.FC = round(2^(logFC),4)) %>% select(WFE.FC)%>% rownames_to_column("PFLU")
+
+dge.top.WS1 <- exactTest(dge.top.fc, pair = c("WT","WS1_Ac")) %>% pluck('table') %>% mutate(WS1.FC = round(2^(logFC),4)) %>% select(WS1.FC)%>% rownames_to_column("PFLU")
+
+dge.top.WT <- exactTest(dge.top.fc, pair = c("WT","WT_Ac")) %>% pluck('table') %>% mutate(WT.FC = round(2^(logFC),4)) %>% select(WT.FC)%>% rownames_to_column("PFLU")
+
+dge.top.EVOL <- exactTest(dge.top.fc, pair = c("WT","EVOL_Ac")) %>% pluck('table') %>% mutate(EVOL.FC = round(2^(logFC),4)) %>% select(EVOL.FC)%>% rownames_to_column("PFLU")
+
+dge.top.MNT <- exactTest(dge.top.fc, pair = c("WT","MNT_Ac")) %>% pluck('table') %>% mutate(MNT.FC = round(2^(logFC),4)) %>% select(MNT.FC)%>% rownames_to_column("PFLU")
+
+
+DGE.TOP.DF <- Reduce(function(x,y) merge(x,y,by="PFLU",all=TRUE) ,list(dge.top.WT,dge.top.FUSION,dge.top.EVOL,dge.top.MNT,dge.top.WFE,dge.top.WS1))
+
+```
+
+# Add annotations from GTF and GO
+```{r}
+
+gtf <- read.csv("../Pseudomonas_fluorescens_SBW25_116_simple.gtf", sep = c("\t"), header = T)
+GO.raw <- read.csv("../gene_ontology_SBW25.csv", header = T)
+library(reshape2)
+library(dplyr)
+
+
+melted <- melt(GO.raw, id.vars = c("Locus_Tag", "Gene.Name", "Product.Description"))
+
+GO <- reshape(melted, idvar = "Locus_Tag", timevar = "variable", direction = "wide") %>% select(!c(Product.Description.Locus.Tag,Gene.Name.Locus.Tag,value.Locus.Tag))
+
+
+namekey <- c(Locus_Tag = "Locus.Tag", Gene.Name.GO.Term = "Gene.Name", Product.Description.GO.Term = "Product.Description", value.GO.Term = "GO.Term")
+
+names(GO) <- namekey[names(GO)]
+
+
+
+named.top.DGE <- merge(DGE.TOP.DF, gtf, by.x = "PFLU", by.y = "locus_tag", all.x=T) %>% select(!c(X,X.1,gene_id))
+
+write.table(named.top.DGE, "../output/DGE_top_10.CSV",sep = ",", row.names = F)
+```
+
+
+
+
+write.table(DGE.TOP.DF, "../output/DGE_top_10.CSV",sep = ",", row.names = F)
+
+
+```
+
+
+
+
+## remove ribosomal proteins
+
+toMatch <- c("PFLU0536","PFLU0534", "PFLU5503", "PFLU5505", "PFLU5518", "PFLU5504", "PFLU0731", "PFLU5536", "PFLU5979","PFLU4708", "PFLU0765", "PFLU0403", "PFLU5980" )
+
+
+all.up.20day <- rbind(WFE.up, WS1.up)
+all.up.20day <- all.up.20day[!duplicated(all.up.20day$locus.tag),]
+all.up.20day <- all.up.20day[!grepl(paste(toMatch,collapse="|"), all.up.20day$locus.tag),]
+all.up.20day <- top_n(all.up.20day, wt=logFC, n=50)
+length(all.up.20day$locus.tag)
+
+
+all.down.20day <- rbind(WFE.down,WS1.down)
+all.down.20day <- all.down.20day[!duplicated(all.down.20day$locus.tag),]
+all.down.20day <- all.down.20day[!grepl(paste(toMatch,collapse="|"), all.down.20day$locus.tag),]
+all.down.20day <- top_n(all.down.20day, wt=logFC, n=50)
+length(all.down.20day$locus.tag)
+
+
+
+all.updown.20day <- rbind(all.up.20day,all.down.20day)
+
+all.updown.20day <- all.updown.20day[!duplicated(all.updown.20day$locus.tag),]
+
+
+counts.sbw25.up100.20day <- counts.sbw25[which(rownames(counts.sbw25$counts) %in% all.updown.20day$locus.tag),]
+
+
+length(unique(all.updown.20day$locus.tag))
+
+rownames(counts.sbw25.up100.20day$counts)
+```
+
+
+
