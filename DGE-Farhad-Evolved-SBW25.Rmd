@@ -201,8 +201,8 @@ setnames(sigDownReg.MNT, 1, "locus.tag")
 ```{r}
 ### find top n and bottom n genes
 
-gup = 10
-gdown = 10
+gup = 20
+gdown = 20
 
 FUSION.up <- top_n(sigUpReg.FUSION, wt=logFC, n=gup)
 FUSION.down <- top_n(sigDownReg.FUSION, wt=logFC, n=gdown)
@@ -230,6 +230,7 @@ WT.top <- rbind(WT.up,WT.down) %>% select(locus.tag)
 
 
 top.list <- unique(rbind(WT.top,MNT.top,EVOL.top,FUSION.top,WFE.top,WS1.top)) 
+
 
 Top.FC <- counts.sbw25[which(rownames(counts.sbw25$counts) %in% top.list$locus.tag),]
 
@@ -261,6 +262,9 @@ dge.top.MNT <- exactTest(dge.top.fc, pair = c("WT","MNT_Ac")) %>% pluck('table')
 
 DGE.TOP.DF <- Reduce(function(x,y) merge(x,y,by="PFLU",all=TRUE) ,list(dge.top.WT,dge.top.FUSION,dge.top.EVOL,dge.top.MNT,dge.top.WFE,dge.top.WS1))
 
+
+
+
 ```
 
 # Add annotations from GTF and GO
@@ -287,50 +291,4 @@ named.top.DGE <- merge(DGE.TOP.DF, gtf, by.x = "PFLU", by.y = "locus_tag", all.x
 
 write.table(named.top.DGE, "../output/DGE_top_10.CSV",sep = ",", row.names = F)
 ```
-
-
-
-
-write.table(DGE.TOP.DF, "../output/DGE_top_10.CSV",sep = ",", row.names = F)
-
-
-```
-
-
-
-
-## remove ribosomal proteins
-
-toMatch <- c("PFLU0536","PFLU0534", "PFLU5503", "PFLU5505", "PFLU5518", "PFLU5504", "PFLU0731", "PFLU5536", "PFLU5979","PFLU4708", "PFLU0765", "PFLU0403", "PFLU5980" )
-
-
-all.up.20day <- rbind(WFE.up, WS1.up)
-all.up.20day <- all.up.20day[!duplicated(all.up.20day$locus.tag),]
-all.up.20day <- all.up.20day[!grepl(paste(toMatch,collapse="|"), all.up.20day$locus.tag),]
-all.up.20day <- top_n(all.up.20day, wt=logFC, n=50)
-length(all.up.20day$locus.tag)
-
-
-all.down.20day <- rbind(WFE.down,WS1.down)
-all.down.20day <- all.down.20day[!duplicated(all.down.20day$locus.tag),]
-all.down.20day <- all.down.20day[!grepl(paste(toMatch,collapse="|"), all.down.20day$locus.tag),]
-all.down.20day <- top_n(all.down.20day, wt=logFC, n=50)
-length(all.down.20day$locus.tag)
-
-
-
-all.updown.20day <- rbind(all.up.20day,all.down.20day)
-
-all.updown.20day <- all.updown.20day[!duplicated(all.updown.20day$locus.tag),]
-
-
-counts.sbw25.up100.20day <- counts.sbw25[which(rownames(counts.sbw25$counts) %in% all.updown.20day$locus.tag),]
-
-
-length(unique(all.updown.20day$locus.tag))
-
-rownames(counts.sbw25.up100.20day$counts)
-```
-
-
 
