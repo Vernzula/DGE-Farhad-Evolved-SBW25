@@ -23,19 +23,24 @@ library(reshape2)
 library(ComplexHeatmap)
 
 ```
+
+
 ```{r setup, include=FALSE, echo=FALSE}
 require("knitr")
 opts_knit$set(root.dir = "counts.clean/")
 
 
 
-group = factor(c(rep("EVOL_Ac", 4), rep("EVOL", 4), rep("MNT_Ac", 4), rep("MNT", 4), rep("Fusion_Ac", 4), rep("Fusion", 4), rep("WFE_Ac", 4), rep("WFE", 4), rep("WS1_Ac", 4), rep("WS1", 4), rep("WT_Ac", 4), rep("WT", 4)))
+group = factor(c(rep("VOL_Ac", 4), rep("VOL", 4), rep("MNT_Ac", 4), rep("MNT", 4), rep("Fusion_Ac", 4), rep("Fusion", 4), rep("WFE_Ac", 4), rep("WFE", 4), rep("WS1_Ac", 4), rep("WS1", 4), rep("WT_Ac", 4), rep("WT", 4)))
 ```
 
 ```{r}
 counts.sbw25 = readDGE(list.files(pattern="_counts.txt"), getwd(), columns = c(1,7), group = group)
 
 ```
+
+
+
 ```{r}
 
 dge <- counts.sbw25
@@ -53,6 +58,7 @@ dge <- calcNormFactors(dge)
 
 dge <- estimateCommonDisp(dge)
 dge <- estimateTagwiseDisp(dge)
+
 ```
 
 
@@ -63,11 +69,15 @@ dge <- estimateTagwiseDisp(dge)
 dgeTest.FUSION <- exactTest(dge, pair = c("WT","Fusion_Ac") )
 dgeTest.WFE <- exactTest(dge, pair = c("WT","WFE_Ac") )
 dgeTest.WS1 <- exactTest(dge, pair = c("WT","WS1_Ac") )
-dgeTest.EVOL <- exactTest(dge, pair = c("WT","EVOL_Ac") )
+dgeTest.VOL <- exactTest(dge, pair = c("WT","VOL_Ac") )
 dgeTest.MNT <- exactTest(dge, pair = c("WT","MNT_Ac") )
 dgeTest.WT <- exactTest(dge, pair = c("WT","WT_Ac") )
 
 ```
+
+
+
+
 ### This chunk is only needed if you want to output a table for a specific PFLU of interest..
 ```{r}
 ### Search for a specific PFLU ###
@@ -75,7 +85,7 @@ searchlist <- c("PFLU_5940") ### enter PFLUs of interest, separated by comma
 
 
 
-dfList <- list(dgeTest.EVOL,dgeTest.FUSION,dgeTest.MNT,dgeTest.WFE,dgeTest.WS1,dgeTest.WT)
+dfList <- list(dgeTest.VOL,dgeTest.FUSION,dgeTest.MNT,dgeTest.WFE,dgeTest.WS1,dgeTest.WT)
 
 outlist <- list()
 
@@ -107,7 +117,7 @@ tags.FUSION <- topTags(dgeTest.FUSION, n=nrow(dgeTest.FUSION$table))
 tags.WFE <- topTags(dgeTest.WFE, n=nrow(dgeTest.WFE$table))
 tags.WS1 <- topTags(dgeTest.WS1, n=nrow(dgeTest.WS1$table))
 tags.WT <- topTags(dgeTest.WT, n=nrow(dgeTest.WT$table))
-tags.EVOL <- topTags(dgeTest.EVOL, n=nrow(dgeTest.EVOL$table))
+tags.VOL <- topTags(dgeTest.VOL, n=nrow(dgeTest.VOL$table))
 tags.MNT <- topTags(dgeTest.MNT, n=nrow(dgeTest.MNT$table))
 
 
@@ -128,9 +138,9 @@ sigDownReg.WT <- tags.WT$table[tags.WT$table$FDR<0.05,]
 sigDownReg.WT <- sigDownReg.WT[order(sigDownReg.WT$logFC),]
 sigUpReg.WT <- sigDownReg.WT[order(sigDownReg.WT$logFC, decreasing=TRUE),]
 
-sigDownReg.EVOL <- tags.EVOL$table[tags.EVOL$table$FDR<0.05,]
-sigDownReg.EVOL <- sigDownReg.EVOL[order(sigDownReg.EVOL$logFC),]
-sigUpReg.EVOL <- sigDownReg.EVOL[order(sigDownReg.EVOL$logFC, decreasing=TRUE),]
+sigDownReg.VOL <- tags.VOL$table[tags.VOL$table$FDR<0.05,]
+sigDownReg.VOL <- sigDownReg.VOL[order(sigDownReg.VOL$logFC),]
+sigUpReg.VOL <- sigDownReg.VOL[order(sigDownReg.VOL$logFC, decreasing=TRUE),]
 
 sigDownReg.MNT <- tags.MNT$table[tags.MNT$table$FDR<0.05,]
 sigDownReg.MNT <- sigDownReg.MNT[order(sigDownReg.MNT$logFC),]
@@ -154,8 +164,8 @@ sigUpReg.WT <- subset(sigUpReg.WT, FDR<FDR.max & logFC>logFC.min)
 sigDownReg.WT <- subset(sigDownReg.WT, FDR<FDR.max & logFC<logFC.max)
 
 
-sigUpReg.EVOL <- subset(sigUpReg.EVOL, FDR<FDR.max & logFC>logFC.min)
-sigDownReg.EVOL <- subset(sigDownReg.EVOL, FDR<FDR.max & logFC<logFC.max)
+sigUpReg.VOL <- subset(sigUpReg.VOL, FDR<FDR.max & logFC>logFC.min)
+sigDownReg.VOL <- subset(sigDownReg.VOL, FDR<FDR.max & logFC<logFC.max)
 
 
 sigUpReg.MNT <- subset(sigUpReg.MNT, FDR<FDR.max & logFC>logFC.min)
@@ -183,10 +193,10 @@ setnames(sigUpReg.WT, 1, "locus.tag")
 setDT(sigDownReg.WT, keep.rownames = T)[]
 setnames(sigDownReg.WT, 1, "locus.tag")
 
-setDT(sigUpReg.EVOL, keep.rownames = T)[]
-setnames(sigUpReg.EVOL, 1, "locus.tag")
-setDT(sigDownReg.EVOL, keep.rownames = T)[]
-setnames(sigDownReg.EVOL, 1, "locus.tag")
+setDT(sigUpReg.VOL, keep.rownames = T)[]
+setnames(sigUpReg.VOL, 1, "locus.tag")
+setDT(sigDownReg.VOL, keep.rownames = T)[]
+setnames(sigDownReg.VOL, 1, "locus.tag")
 
 setDT(sigUpReg.MNT, keep.rownames = T)[]
 setnames(sigUpReg.MNT, 1, "locus.tag")
@@ -201,38 +211,59 @@ setnames(sigDownReg.MNT, 1, "locus.tag")
 ```{r}
 ### find top n and bottom n genes
 
-gup = 20
-gdown = 20
+gup = 10
+gdown = 10
+
+
+### Ribosomal Proteins to remove... will have to check each strain after removing and adjust gup/down appropriately to even out list...
+
+toMatch <- c("PFLU_0536","PFLU_0534", "PFLU_5503", "PFLU_5505", "PFLU_5518", "PFLU_5504", "PFLU_0731", "PFLU_5536", "PFLU_5979","PFLU_4708", "PFLU_0765", "PFLU_0403", "PFLU_5980" )
+
+
 
 FUSION.up <- top_n(sigUpReg.FUSION, wt=logFC, n=gup)
 FUSION.down <- top_n(sigDownReg.FUSION, wt=logFC, n=gdown)
-FUSION.top <- rbind(FUSION.up,FUSION.down) %>% select(locus.tag)
+FUSION.top <- rbind(FUSION.up,FUSION.down) %>% select(locus.tag) %>% subset(!(locus.tag %in% toMatch))
+length(FUSION.top$locus.tag)
 
 WFE.up <- top_n(sigUpReg.WFE, wt=logFC, n=gup)
 WFE.down <- top_n(sigDownReg.WFE, wt=logFC, n=gdown)
-WFE.top <- rbind(WFE.up,WFE.down) %>% select(locus.tag)
+WFE.top <- rbind(WFE.up,WFE.down) %>% select(locus.tag) %>% subset(!(locus.tag %in% toMatch))
+length(WFE.top$locus.tag)
 
-WS1.up <- top_n(sigUpReg.WS1, wt=logFC, n=gup)
+WS1.up <- top_n(sigUpReg.WS1, wt=logFC, n=12) ##adjusted because WS1 has 2 ribosomal genes in top 10
 WS1.down <- top_n(sigDownReg.WS1, wt=logFC, n=gdown)
-WS1.top <- rbind(WS1.up,WS1.down) %>% select(locus.tag)
+WS1.top <- rbind(WS1.up,WS1.down) %>% select(locus.tag) %>% subset(!(locus.tag %in% toMatch))
+length(WS1.top$locus.tag)
 
 MNT.up <- top_n(sigUpReg.MNT, wt=logFC, n=gup)
 MNT.down <- top_n(sigDownReg.MNT, wt=logFC, n=gdown)
-MNT.top <- rbind(MNT.up,MNT.down) %>% select(locus.tag)
+MNT.top <- rbind(MNT.up,MNT.down) %>% select(locus.tag) %>% subset(!(locus.tag %in% toMatch))
+length(MNT.top$locus.tag)
 
-EVOL.up <- top_n(sigUpReg.EVOL, wt=logFC, n=gup)
-EVOL.down <- top_n(sigDownReg.EVOL, wt=logFC, n=gdown)
-EVOL.top <- rbind(EVOL.up,EVOL.down) %>% select(locus.tag)
+VOL.up <- top_n(sigUpReg.VOL, wt=logFC, n=gup)
+VOL.down <- top_n(sigDownReg.VOL, wt=logFC, n=gdown)
+VOL.top <- rbind(VOL.up,VOL.down) %>% select(locus.tag) %>% subset(!(locus.tag %in% toMatch))
+length(VOL.top$locus.tag)
+
 
 WT.up <- top_n(sigUpReg.WT, wt=logFC, n=gup)
 WT.down <- top_n(sigDownReg.WT, wt=logFC, n=gdown)
-WT.top <- rbind(WT.up,WT.down) %>% select(locus.tag)
+WT.top <- rbind(WT.up,WT.down) %>% select(locus.tag) %>% subset(!(locus.tag %in% toMatch))
+length(WT.top$locus.tag)
+```
 
 
-top.list <- unique(rbind(WT.top,MNT.top,EVOL.top,FUSION.top,WFE.top,WS1.top)) 
+## Here we need to choose which strains will make up the combined 'top' list... uncomment or make your own
+```{r}
+
+#top.list <- unique(rbind(WT.top,WFE.top,WS1.top)) ### Paper 1
+
+top.list <- unique(rbind(WT.top,MNT.top,VOL.top)) ### Paper 2
 
 
 Top.FC <- counts.sbw25[which(rownames(counts.sbw25$counts) %in% top.list$locus.tag),]
+
 
 
 
@@ -244,39 +275,65 @@ dge.top.fc <- estimateTagwiseDisp(dge.top.fc)
 
 ```
 
+
+
 ```{r}
 library(purrr)
 
-dge.top.FUSION <- exactTest(dge.top.fc, pair = c("WT","Fusion_Ac")) %>% pluck('table') %>% mutate(FUSION.FC = round(2^(logFC),4)) %>% select(FUSION.FC) %>% rownames_to_column("PFLU")
+dge.top.FUSION.Ac <- exactTest(dge.top.fc, pair = c("WT","Fusion_Ac")) %>% pluck('table') %>% mutate(FUSION.FC.Ac = logFC) %>% select(FUSION.FC.Ac) %>% rownames_to_column("PFLU")
 
-dge.top.WFE <- exactTest(dge.top.fc, pair = c("WT","WFE_Ac")) %>% pluck('table') %>% mutate(WFE.FC = round(2^(logFC),4)) %>% select(WFE.FC)%>% rownames_to_column("PFLU")
+dge.top.FUSION <- exactTest(dge.top.fc, pair = c("WT","Fusion")) %>% pluck('table') %>% mutate(FUSION.FC = logFC) %>% select(FUSION.FC) %>% rownames_to_column("PFLU")
 
-dge.top.WS1 <- exactTest(dge.top.fc, pair = c("WT","WS1_Ac")) %>% pluck('table') %>% mutate(WS1.FC = round(2^(logFC),4)) %>% select(WS1.FC)%>% rownames_to_column("PFLU")
+dge.top.WFE.Ac <- exactTest(dge.top.fc, pair = c("WT","WFE_Ac")) %>% pluck('table') %>% mutate(WFE.FC.Ac = logFC) %>% select(WFE.FC.Ac)%>% rownames_to_column("PFLU")
 
-dge.top.WT <- exactTest(dge.top.fc, pair = c("WT","WT_Ac")) %>% pluck('table') %>% mutate(WT.FC = round(2^(logFC),4)) %>% select(WT.FC)%>% rownames_to_column("PFLU")
+dge.top.WFE <- exactTest(dge.top.fc, pair = c("WT","WFE")) %>% pluck('table') %>% mutate(WFE.FC = logFC) %>% select(WFE.FC)%>% rownames_to_column("PFLU")
 
-dge.top.EVOL <- exactTest(dge.top.fc, pair = c("WT","EVOL_Ac")) %>% pluck('table') %>% mutate(EVOL.FC = round(2^(logFC),4)) %>% select(EVOL.FC)%>% rownames_to_column("PFLU")
+dge.top.WS1.Ac <- exactTest(dge.top.fc, pair = c("WT","WS1_Ac")) %>% pluck('table') %>% mutate(WS1.FC.Ac = logFC) %>% select(WS1.FC.Ac)%>% rownames_to_column("PFLU")
 
-dge.top.MNT <- exactTest(dge.top.fc, pair = c("WT","MNT_Ac")) %>% pluck('table') %>% mutate(MNT.FC = round(2^(logFC),4)) %>% select(MNT.FC)%>% rownames_to_column("PFLU")
+dge.top.WS1 <- exactTest(dge.top.fc, pair = c("WT","WS1")) %>% pluck('table') %>% mutate(WS1.FC = logFC) %>% select(WS1.FC)%>% rownames_to_column("PFLU")
+
+dge.top.WT.Ac <- exactTest(dge.top.fc, pair = c("WT","WT_Ac")) %>% pluck('table') %>% mutate(WT.FC.Ac = logFC) %>% select(WT.FC.Ac)%>% rownames_to_column("PFLU")
+
+dge.top.VOL <- exactTest(dge.top.fc, pair = c("WT","VOL")) %>% pluck('table') %>% mutate(VOL.FC = logFC) %>% select(VOL.FC)%>% rownames_to_column("PFLU")
+
+dge.top.VOL.Ac <- exactTest(dge.top.fc, pair = c("WT","VOL_Ac")) %>% pluck('table') %>% mutate(VOL.FC.Ac = logFC) %>% select(VOL.FC.Ac)%>% rownames_to_column("PFLU")
+
+dge.top.MNT <- exactTest(dge.top.fc, pair = c("WT","MNT")) %>% pluck('table') %>% mutate(MNT.FC = logFC) %>% select(MNT.FC)%>% rownames_to_column("PFLU")
+
+dge.top.MNT.Ac <- exactTest(dge.top.fc, pair = c("WT","MNT_Ac")) %>% pluck('table') %>% mutate(MNT.FC.Ac = logFC) %>% select(MNT.FC.Ac)%>% rownames_to_column("PFLU")
+
+```
 
 
-DGE.TOP.DF <- Reduce(function(x,y) merge(x,y,by="PFLU",all=TRUE) ,list(dge.top.WT,dge.top.FUSION,dge.top.EVOL,dge.top.MNT,dge.top.WFE,dge.top.WS1))
+
+## Here is where we will choose the strains to put into the output table
+# Can just uncomment the one you want, or make your own
+```{r}
+
+# This one is for 20 day (paper 1)
+## DGE.TOP.DF <- Reduce(function(x,y) merge(x,y,by="PFLU",all=TRUE) ,list(dge.top.WT.Ac,dge.top.WS1,dge.top.WS1.Ac,dge.top.WFE,dge.top.WFE.Ac))
+
+
+# This one is for 90 day (paper 2)
+DGE.TOP.DF <- Reduce(function(x,y) merge(x,y,by="PFLU",all=TRUE) ,list(dge.top.WT.Ac,dge.top.VOL,dge.top.VOL.Ac,dge.top.MNT,dge.top.MNT.Ac))
 
 
 
 
 ```
 
+
+
 # Add annotations from GTF and GO
 ```{r}
 
-gtf <- read.csv("../Pseudomonas_fluorescens_SBW25_116_simple.gtf", sep = c("\t"), header = T)
+#gtf <- read.csv("../Pseudomonas_fluorescens_SBW25_116_simple.gtf", sep = c("\t"), header = T)
 GO.raw <- read.csv("../gene_ontology_SBW25.csv", header = T)
 library(reshape2)
 library(dplyr)
 
 
-melted <- melt(GO.raw, id.vars = c("Locus_Tag", "Gene.Name", "Product.Description"))
+melted <- reshape2::melt(GO.raw, id.vars = c("Locus_Tag", "Gene.Name", "Product.Description"))
 
 GO <- reshape(melted, idvar = "Locus_Tag", timevar = "variable", direction = "wide") %>% select(!c(Product.Description.Locus.Tag,Gene.Name.Locus.Tag,value.Locus.Tag))
 
@@ -287,8 +344,175 @@ names(GO) <- namekey[names(GO)]
 
 
 
-named.top.DGE <- merge(DGE.TOP.DF, gtf, by.x = "PFLU", by.y = "locus_tag", all.x=T) %>% select(!c(X,X.1,gene_id))
+named.top.DGE <- merge(DGE.TOP.DF, GO, by.x = "PFLU", by.y = "Locus.Tag", all.x=T)
+
+```
+
+## Write your table, change filename as appropriate 
+```{r}
 
 write.table(named.top.DGE, "../output/DGE_top_10.CSV",sep = ",", row.names = F)
 ```
+
+
+## Next chunks produce a heatmap based on the FC table
+# Modify the FC table for our heatmap
+```{r}
+
+
+gene.list.a <- as.data.frame(named.top.DGE$PFLU)
+gene.list.b <- select(GO, c("Locus.Tag","Gene.Name"))
+gene.list.c <- merge(gene.list.a,gene.list.b,by.x = "named.top.DGE$PFLU",by.y="Locus.Tag", all.x=T)
+
+
+gene.list.c$Gene.Name <- ifelse(is.na(gene.list.c$Gene.Name), gene.list.c$`named.top.DGE$PFLU`,gene.list.c$Gene.Name)
+
+
+#gene.list.c$long.name.a <- ifelse(gene.list.c$Gene.Name == gene.list.c$`named.top.DGE$PFLU`, "",gene.list.c$Gene.Name)
+
+#gene.list.c %>% unite("long.name", c(named.top.DGE))
+
+
+rownames(named.top.DGE) <- gene.list.c$Gene.Name
+
+
+GO.ann <- select(GO, c("Gene.Name", "Product.Description"))
+
+GO.ann <- merge(GO.ann, gene.list.c, by.x="Gene.Name", by.y="Gene.Name", all.y=T)
+
+
+named.top.DGE$names <- rownames(named.top.DGE)
+named.top.DGE <- merge(GO.ann, named.top.DGE, by.x = "Gene.Name", by.y="names")
+
+
+
+GO.ann <- GO.ann %>% remove_rownames %>% column_to_rownames(var="Gene.Name") %>% select("Product.Description")
+
+
+#write.table(named.top.DGE, "../output/named.table.csv", sep = ",")
+
+named.top.DGE$Gene.Name2 <- ifelse(named.top.DGE$Gene.Name == named.top.DGE$PFLU, NA,named.top.DGE$Gene.Name)
+
+
+y.means.unite <- named.top.DGE %>% unite("Names", c(PFLU,Gene.Name2,Product.Description.x), sep = " : ",na.rm = TRUE ) %>% column_to_rownames(var = "Names")
+
+
+```
+
+
+```{r}
+
+
+y.means.final <- y.means.unite %>%  select(WT.FC.Ac, VOL.FC, VOL.FC.Ac, MNT.FC, MNT.FC.Ac) ## 90 day
+
+#y.means.final <- y.means.unite %>%  select(WT.FC.Ac, WS1.FC, WS1.FC.Ac, WFE.FC, WFE.FC.Ac) ## 20 day
+
+
+##install.packages('scico')
+library(scico)
+
+pal = scico(30, palette  = "roma")
+pal.low = scico(30, palette  = "oslo")
+pal.high = scico(30, palette  = "lajolla")
+
+mat <- as.matrix(y.means.final)
+
+mat <- mat[order(rowMeans(mat),decreasing = T),]
+
+
+p1 = pheatmap(mat, color = rev(pal), cluster_cols = F, cellwidth = 20, fontsize_row = 8, gaps_col = c(1,3,5), cluster_rows = F)
+
+
+
+pdf("../output/DGE_log2FC_Top10_WT_VOL_MNT.pdf", useDingbats = F, height = 12, width = 10)
+p1
+dev.off
+
+#pdf("../output/DGE_log2FC_Top10_WT_WFE_WS1.pdf", useDingbats = F, height = 12, width = 10)
+#p1
+#dev.off
+
+```
+
+
+
+
+
+
+
+
+## Next chunks produce a heatmap based on the table but using CPM
+# Prepare the CPM table
+```{r}
+
+y <- cpm(dge.top.fc, log=TRUE, prior.count = 1)
+
+
+length(rownames(y))
+
+reps = 4
+y.means <- t(rowsum(t(y), as.integer(gl(ncol(y), reps, ncol(y))))) / reps
+
+y.means <- as.data.frame(y.means)
+y.means <- setNames(y.means,unique(dge.top.fc$samples$group))
+
+y.means.subset <- y.means %>% select(WT,WT_Ac,WS1,WS1_Ac,WFE,WFE_Ac)
+
+
+
+```
+
+```{r}
+
+
+gene.list.a <- as.data.frame(rownames(y.means.subset))
+gene.list.b <- select(GO, c("Locus.Tag","Gene.Name"))
+gene.list.c <- merge(gene.list.a,gene.list.b,by.x = "rownames(y.means.subset)",by.y="Locus.Tag", all.x=T)
+
+
+
+gene.list.c$Gene.Name <- ifelse(is.na(gene.list.c$Gene.Name), gene.list.c$`rownames(y.means.subset)`,gene.list.c$Gene.Name)
+
+
+rownames(y.means.subset) <- gene.list.c$Gene.Name
+
+
+GO.ann <- select(GO, c("Gene.Name", "Product.Description"))
+
+GO.ann <- merge(GO.ann, gene.list.c, by.x="Gene.Name", by.y="Gene.Name", all.y=T)
+
+
+y.means.subset$names <- rownames(y.means.subset)
+y.means.subset <- merge(GO.ann, y.means.subset, by.x = "Gene.Name", by.y="names")
+
+
+
+GO.ann <- GO.ann %>% remove_rownames %>% column_to_rownames(var="Gene.Name") %>% select("Product.Description")
+
+
+y.means.final <- y.means.subset %>% unite("Names", Gene.Name:Product.Description, sep = " : ",na.rm = TRUE ) %>% select(!"rownames(y.means.subset)")
+
+y.means.final <- y.means.final %>% remove_rownames %>% column_to_rownames(var="Names")
+
+##install.packages('scico')
+library(scico)
+
+pal = scico(30, palette  = "roma")
+pal.low = scico(30, palette  = "oslo")
+pal.high = scico(30, palette  = "lajolla")
+
+
+#y.means.final = y.means.final[,c("WT","WT + Ac","WS1","WS1 + Ac","WFE","WFE + AC")]
+
+p1 = pheatmap(as.matrix(y.means.final), color = rev(pal), cluster_cols = F, cellwidth = 20, fontsize_row = 8, gaps_col = c(2,4), cutree_rows = 7)
+
+
+pdf("../output/DGE_Top10_WT_WFE_WS1.pdf", useDingbats = F, height = 12, width = 10)
+p1
+dev.off
+
+```
+
+
+
 
